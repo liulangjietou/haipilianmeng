@@ -11,6 +11,10 @@ export default function Admin() {
   const [votes, setVotes] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -18,14 +22,17 @@ export default function Admin() {
       return;
     }
     loadData();
-  }, [user]);
+  }, [user, tab, page, pageSize]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       if (tab === 'votes') {
-        const { data } = await api.get('/admin/votes');
+        const { data } = await api.get('/admin/votes', { params: { page, pageSize } });
         setVotes(data.votes);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        if (data.page !== page) setPage(data.page);
       } else {
         const { data } = await api.get('/admin/users');
         setUsers(data.users);
@@ -41,7 +48,11 @@ export default function Admin() {
     if (!confirm('确定删除此投票？')) return;
     try {
       await api.delete(`/admin/votes/${id}`);
-      setVotes(votes.filter((v) => v.id !== id));
+      if (votes.length === 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        loadData();
+      }
     } catch (err) {
       console.error(err);
     }
@@ -95,7 +106,7 @@ export default function Admin() {
 
       <div className="flex gap-2 mb-6">
         <button
-          onClick={() => { setTab('votes'); loadData(); }}
+          onClick={() => { setTab('votes'); setPage(1); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             tab === 'votes'
               ? 'bg-court-600 text-white'
@@ -105,7 +116,7 @@ export default function Admin() {
           投票明细
         </button>
         <button
-          onClick={() => { setTab('users'); loadData(); }}
+          onClick={() => { setTab('users'); setPage(1); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             tab === 'users'
               ? 'bg-court-600 text-white'
@@ -116,10 +127,14 @@ export default function Admin() {
         </button>
       </div>
 
-      {loading ? (
+      {loading && votes.length === 0 && tab === 'votes' ? (
         <div className="text-center py-12 text-slate-400">加载中...</div>
       ) : tab === 'votes' ? (
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+        <div
+          className={`bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden transition-opacity ${
+            loading ? 'opacity-60' : ''
+          }`}
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -164,6 +179,36 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-700/50">
+            <span className="text-slate-400 text-sm">共 {total} 条投票记录</span>
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                className="bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-slate-300 text-sm focus:outline-none"
+              >
+                {[10, 20, 50, 100].map((n) => (
+                  <option key={n} value={n}>{n} 条/页</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 text-sm"
+              >
+                上一页
+              </button>
+              <span className="text-slate-400 text-sm">第 {page} / {totalPages} 页</span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 text-sm"
+              >
+                下一页
+              </button>
+            </div>
           </div>
         </div>
       ) : (

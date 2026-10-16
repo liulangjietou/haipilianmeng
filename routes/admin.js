@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import {
   getAllVotes,
+  getVotesPage,
   getAllUsers,
   deleteUser,
+  deleteVote,
   updateUser,
+  updateVote,
   createUser,
   findUserById,
   findUserByName,
   POSITIONS,
-  STAR_LEVELS,
 } from '../db.js';
 import { adminRequired } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
@@ -16,19 +18,23 @@ import bcrypt from 'bcryptjs';
 const router = Router();
 
 router.get('/votes', adminRequired, (req, res) => {
-  const votes = getAllVotes();
-  const enriched = votes.map((v) => {
-    const voter = findUserById(v.voterId);
-    const candidate = findUserById(v.candidateId);
-    const position = POSITIONS.find((p) => p.id === v.positionId);
-    return {
-      ...v,
-      voterName: voter?.name || '未知',
-      candidateName: candidate?.name || '未知',
-      positionName: position?.name || '未知',
-    };
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize) || 20));
+  const { rows, total, totalPages } = getVotesPage(page, pageSize);
+  const names = new Map(getAllUsers().map((u) => [u.id, u.name]));
+  const enriched = rows.map((v) => ({
+    ...v,
+    voterName: names.get(v.voterId) || '未知',
+    candidateName: names.get(v.candidateId) || '未知',
+    positionName: POSITIONS.find((p) => p.id === v.positionId)?.name || '未知',
+  }));
+  res.json({
+    votes: enriched,
+    total,
+    page: Math.min(Math.max(1, page), totalPages),
+    pageSize,
+    totalPages,
   });
-  res.json({ votes: enriched });
 });
 
 router.delete('/votes/:id', adminRequired, (req, res) => {
@@ -41,12 +47,8 @@ router.delete('/votes/:id', adminRequired, (req, res) => {
 router.put('/votes/:id', adminRequired, (req, res) => {
   const id = parseInt(req.params.id);
   const { starLevel, positionId } = req.body;
-  const votes = getAllVotes();
-  const vote = votes.find((v) => v.id === id);
+  const vote = updateVote(id, { starLevel, positionId });
   if (!vote) return res.status(404).json({ error: '投票不存在' });
-  if (starLevel && STAR_LEVELS.includes(starLevel)) vote.starLevel = starLevel;
-  if (positionId && POSITIONS.find((p) => p.id === positionId)) vote.positionId = positionId;
-  vote.updatedAt = new Date().toISOString();
   res.json({ vote });
 });
 
@@ -104,22 +106,17 @@ router.post('/create-admin', adminRequired, async (req, res) => {
 
 router.get('/export', adminRequired, (req, res) => {
   const votes = getAllVotes();
-  const users = getAllUsers();
+  const names = new Map(getAllUsers().map((u) => [u.id, u.name]));
   const data = {
     exportedAt: new Date().toISOString(),
-    users,
-    votes: votes.map((v) => {
-      const voter = findUserById(v.voterId);
-      const candidate = findUserById(v.candidateId);
-      const position = POSITIONS.find((p) => p.id === v.positionId);
-      return {
-        voterName: voter?.name,
-        candidateName: candidate?.name,
-        positionName: position?.name,
-        starLevel: v.starLevel,
-        createdAt: v.createdAt,
-      };
-    }),
+    users: getAllUsers(),
+    votes: votes.map((v) => ({
+      voterName: names.get(v.voterId),
+      candidateName: names.get(v.candidateId),
+      positionName: POSITIONS.find((p) => p.id === v.positionId)?.name,
+      starLevel: v.starLevel,
+      createdAt: v.createdAt,
+    })),
   };
   res.json(data);
 });
