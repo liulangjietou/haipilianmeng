@@ -293,6 +293,11 @@ function getDetailedResults() {
     playerRankings.sort((a, b) => {
       if (b.finalStar !== a.finalStar) return b.finalStar - a.finalStar;
       if (b.totalVotes !== a.totalVotes) return b.totalVotes - a.totalVotes;
+      for (const star of [...STAR_LEVELS].reverse()) {
+        const av = a.starCounts[star] || 0;
+        const bv = b.starCounts[star] || 0;
+        if (bv !== av) return bv - av;
+      }
       return a.sortKey.localeCompare(b.sortKey);
     });
     rankings[pos.id] = playerRankings.map((p, i) => ({ rank: i + 1, ...p }));
