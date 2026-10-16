@@ -16,7 +16,7 @@ export default function Navbar() {
         <Link to="/" className="flex items-center gap-2 text-xl font-bold">
           <img src="/logo.jpg" alt="球队logo" className="w-10 h-10 rounded-full object-cover border-2 border-court-500/50" />
           <span className="bg-gradient-to-r from-court-400 to-court-600 bg-clip-text text-transparent">
-            嗨皮联盟星际投票
+            嗨皮联盟星级投票
           </span>
         </Link>
 
