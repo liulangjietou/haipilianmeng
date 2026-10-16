@@ -34,8 +34,11 @@ export default function Admin() {
         setTotalPages(data.totalPages);
         if (data.page !== page) setPage(data.page);
       } else {
-        const { data } = await api.get('/admin/users');
+        const { data } = await api.get('/admin/users', { params: { page, pageSize } });
         setUsers(data.users);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        if (data.page !== page) setPage(data.page);
       }
     } catch (err) {
       console.error(err);
@@ -62,7 +65,11 @@ export default function Admin() {
     if (!confirm('确定删除此用户？相关投票也会被删除。')) return;
     try {
       await api.delete(`/admin/users/${id}`);
-      setUsers(users.filter((u) => u.id !== id));
+      if (users.length === 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        loadData();
+      }
     } catch (err) {
       console.error(err);
     }
@@ -127,7 +134,7 @@ export default function Admin() {
         </button>
       </div>
 
-      {loading && votes.length === 0 && tab === 'votes' ? (
+      {loading && (tab === 'votes' ? votes.length === 0 : users.length === 0) ? (
         <div className="text-center py-12 text-slate-400">加载中...</div>
       ) : tab === 'votes' ? (
         <div
@@ -212,7 +219,11 @@ export default function Admin() {
           </div>
         </div>
       ) : (
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+        <div
+          className={`bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden transition-opacity ${
+            loading ? 'opacity-60' : ''
+          }`}
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -279,6 +290,36 @@ export default function Admin() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-700/50">
+            <span className="text-slate-400 text-sm">共 {total} 位用户</span>
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                className="bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-slate-300 text-sm focus:outline-none"
+              >
+                {[10, 20, 50, 100].map((n) => (
+                  <option key={n} value={n}>{n} 条/页</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 text-sm"
+              >
+                上一页
+              </button>
+              <span className="text-slate-400 text-sm">第 {page} / {totalPages} 页</span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-200 text-sm"
+              >
+                下一页
+              </button>
+            </div>
           </div>
         </div>
       )}

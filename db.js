@@ -71,6 +71,7 @@ const stmts = {
   allVotes: sqlite.prepare('SELECT * FROM votes'),
   countVotes: sqlite.prepare('SELECT COUNT(*) AS n FROM votes'),
   votesPage: sqlite.prepare('SELECT * FROM votes ORDER BY id DESC LIMIT ? OFFSET ?'),
+  usersPage: sqlite.prepare('SELECT * FROM users ORDER BY id ASC LIMIT ? OFFSET ?'),
   votesForCandidate: sqlite.prepare('SELECT * FROM votes WHERE candidateId = ?'),
   candidates: sqlite.prepare("SELECT * FROM users WHERE active = 1 AND role <> 'admin'"),
 };
@@ -152,6 +153,16 @@ function createUser(name, passwordHash, role = 'user', nickname = '') {
 
 function getAllUsers() {
   return stmts.allUsers.all().map(({ password, ...u }) => ({ ...u, active: u.active === 1 }));
+}
+
+function getUsersPage(page = 1, pageSize = 20) {
+  const total = stmts.countUsers.get().n;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, page), totalPages);
+  const rows = stmts.usersPage
+    .all(pageSize, (current - 1) * pageSize)
+    .map(({ password, ...u }) => ({ ...u, active: u.active === 1 }));
+  return { rows, total, page: current, pageSize, totalPages };
 }
 
 function deleteUser(id) {
@@ -348,6 +359,7 @@ export {
   findUserById,
   createUser,
   getAllUsers,
+  getUsersPage,
   deleteUser,
   updateUser,
   changeUserName,

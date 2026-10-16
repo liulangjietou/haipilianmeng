@@ -3,6 +3,7 @@ import {
   getAllVotes,
   getVotesPage,
   getAllUsers,
+  getUsersPage,
   deleteUser,
   deleteVote,
   updateUser,
@@ -53,8 +54,16 @@ router.put('/votes/:id', adminRequired, (req, res) => {
 });
 
 router.get('/users', adminRequired, (req, res) => {
-  const users = getAllUsers();
-  res.json({ users });
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize) || 20));
+  const { rows, total, totalPages } = getUsersPage(page, pageSize);
+  res.json({
+    users: rows,
+    total,
+    page: Math.min(Math.max(1, page), totalPages),
+    pageSize,
+    totalPages,
+  });
 });
 
 router.delete('/users/:id', adminRequired, (req, res) => {
