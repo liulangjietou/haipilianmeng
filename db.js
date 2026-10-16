@@ -248,6 +248,7 @@ function getDetailedResults() {
     }
     playerRankings.sort((a, b) => {
       if (b.finalStar !== a.finalStar) return b.finalStar - a.finalStar;
+      if (b.totalVotes !== a.totalVotes) return b.totalVotes - a.totalVotes;
       return a.sortKey.localeCompare(b.sortKey);
     });
     rankings[pos.id] = playerRankings.map((p, i) => ({ rank: i + 1, ...p }));
