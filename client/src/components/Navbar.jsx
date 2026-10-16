@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ChangeNameModal from './ChangeNameModal';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const [showNameModal, setShowNameModal] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -58,6 +61,12 @@ export default function Navbar() {
                   )}
                 </span>
                 <button
+                  onClick={() => setShowNameModal(true)}
+                  className="text-sm text-court-400 hover:text-court-300 transition-colors"
+                >
+                  改名字
+                </button>
+                <button
                   onClick={handleLogout}
                   className="text-sm text-slate-400 hover:text-white transition-colors"
                 >
@@ -83,6 +92,7 @@ export default function Navbar() {
           )}
         </div>
       </div>
+      {showNameModal && <ChangeNameModal onClose={() => setShowNameModal(false)} />}
     </nav>
   );
 }

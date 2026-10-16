@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { findUserByName, findUserById, createUser } from '../db.js';
+import { findUserByName, findUserById, createUser, changeUserName, MAX_NAME_CHANGES } from '../db.js';
 import { JWT_SECRET, authRequired } from '../middleware/auth.js';
 
 const router = Router();
@@ -15,6 +15,7 @@ function buildUserResponse(user) {
     name: user.name,
     nickname: user.nickname || '',
     role: user.role,
+    nameChangesLeft: Math.max(0, MAX_NAME_CHANGES - (user.nameChangeCount || 0)),
   };
 }
 
@@ -87,6 +88,31 @@ router.get('/me', authRequired, (req, res) => {
   const user = findUserById(req.user.id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json({ user: buildUserResponse(user) });
+});
+
+router.put('/name', authRequired, (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: '请输入新名字' });
+  }
+  if (!NAME_REGEX.test(name)) {
+    return res.status(400).json({ error: '名字只能包含汉字和大小写字母，长度1-20个字符' });
+  }
+
+  const result = changeUserName(req.user.id, name);
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  const user = result.user;
+  const token = jwt.sign(
+    { id: user.id, name: user.name, nickname: user.nickname, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  res.json({ token, user: buildUserResponse(user) });
 });
 
 export default router;

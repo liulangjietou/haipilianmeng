@@ -15,6 +15,8 @@ const POSITIONS = [
 
 const STAR_LEVELS = [1, 2, 3, 4, 5];
 
+const MAX_NAME_CHANGES = 2;
+
 const DB_FILE = process.env.DB_FILE || path.join(os.homedir(), '.basketball-vote.sqlite');
 const LEGACY_SNAPSHOT = path.join(os.homedir(), '.basketball-vote-db.json');
 
@@ -27,7 +29,8 @@ sqlite.exec(`
     password TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
     active INTEGER NOT NULL DEFAULT 1,
-    createdAt TEXT NOT NULL
+    createdAt TEXT NOT NULL,
+    nameChangeCount INTEGER NOT NULL DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS votes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +42,11 @@ sqlite.exec(`
     updatedAt TEXT NOT NULL
   );
 `);
+
+const userColumns = sqlite.prepare('PRAGMA table_info(users)').all();
+if (!userColumns.some((c) => c.name === 'nameChangeCount')) {
+  sqlite.exec('ALTER TABLE users ADD COLUMN nameChangeCount INTEGER NOT NULL DEFAULT 0');
+}
 
 const stmts = {
   countUsers: sqlite.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -53,6 +61,7 @@ const stmts = {
   findVote: sqlite.prepare(
     'SELECT * FROM votes WHERE voterId = ? AND candidateId = ? AND positionId = ?'
   ),
+  findVoteById: sqlite.prepare('SELECT * FROM votes WHERE id = ?'),
   updateVote: sqlite.prepare('UPDATE votes SET starLevel = ?, updatedAt = ? WHERE id = ? RETURNING *'),
   insertVote: sqlite.prepare(
     'INSERT INTO votes (voterId, candidateId, positionId, starLevel, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?) RETURNING *'
@@ -60,6 +69,8 @@ const stmts = {
   deleteVote: sqlite.prepare('DELETE FROM votes WHERE id = ?'),
   votesByVoter: sqlite.prepare('SELECT * FROM votes WHERE voterId = ?'),
   allVotes: sqlite.prepare('SELECT * FROM votes'),
+  countVotes: sqlite.prepare('SELECT COUNT(*) AS n FROM votes'),
+  votesPage: sqlite.prepare('SELECT * FROM votes ORDER BY id DESC LIMIT ? OFFSET ?'),
   votesForCandidate: sqlite.prepare('SELECT * FROM votes WHERE candidateId = ?'),
   candidates: sqlite.prepare("SELECT * FROM users WHERE active = 1 AND role <> 'admin'"),
 };
@@ -166,6 +177,18 @@ function updateUser(id, updates) {
   return findUserById(id);
 }
 
+function changeUserName(id, newName) {
+  const user = findUserById(id);
+  if (!user) return { error: '用户不存在' };
+  if (newName === user.name) return { error: '新名字与当前名字相同' };
+  if (user.nameChangeCount >= MAX_NAME_CHANGES) return { error: '更改次数已用完' };
+  if (findUserByName(newName)) return { error: '该名字已被使用' };
+  sqlite
+    .prepare('UPDATE users SET name = ?, nameChangeCount = nameChangeCount + 1 WHERE id = ?')
+    .run(newName, id);
+  return { user: findUserById(id) };
+}
+
 function upsertVote(voterId, candidateId, positionId, starLevel) {
   const now = new Date().toISOString();
   const existing = stmts.findVote.get(voterId, candidateId, positionId);
@@ -173,6 +196,19 @@ function upsertVote(voterId, candidateId, positionId, starLevel) {
     return stmts.updateVote.get(starLevel, now, existing.id);
   }
   return stmts.insertVote.get(voterId, candidateId, positionId, starLevel, now, now);
+}
+
+function updateVote(id, fields = {}) {
+  const vote = stmts.findVoteById.get(id);
+  if (!vote) return null;
+  const starLevel = STAR_LEVELS.includes(fields.starLevel) ? fields.starLevel : vote.starLevel;
+  const positionId = POSITIONS.some((p) => p.id === fields.positionId)
+    ? fields.positionId
+    : vote.positionId;
+  sqlite
+    .prepare('UPDATE votes SET starLevel = ?, positionId = ?, updatedAt = ? WHERE id = ?')
+    .run(starLevel, positionId, new Date().toISOString(), id);
+  return stmts.findVoteById.get(id);
 }
 
 function deleteVote(id) {
@@ -185,6 +221,14 @@ function getVotesByVoter(voterId) {
 
 function getAllVotes() {
   return stmts.allVotes.all();
+}
+
+function getVotesPage(page = 1, pageSize = 20) {
+  const total = stmts.countVotes.get().n;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, page), totalPages);
+  const rows = stmts.votesPage.all(pageSize, (current - 1) * pageSize);
+  return { rows, total, page: current, pageSize, totalPages };
 }
 
 function getVotesForCandidate(candidateId) {
@@ -293,6 +337,7 @@ function getPlayerDetail(playerId) {
 export {
   POSITIONS,
   STAR_LEVELS,
+  MAX_NAME_CHANGES,
   seed,
   findUserByName,
   findUserById,
@@ -300,10 +345,13 @@ export {
   getAllUsers,
   deleteUser,
   updateUser,
+  changeUserName,
   upsertVote,
+  updateVote,
   deleteVote,
   getVotesByVoter,
   getAllVotes,
+  getVotesPage,
   getVotesForCandidate,
   calculateResults,
   getDetailedResults,

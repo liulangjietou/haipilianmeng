@@ -18,6 +18,16 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return;
+    api
+      .get('/auth/me')
+      .then(({ data }) => setUser(data.user))
+      .catch((err) => {
+        if (err.response?.status === 401) setUser(null);
+      });
+  }, []);
+
   const login = async (name, password) => {
     const { data } = await api.post('/auth/login', { name, password });
     localStorage.setItem('token', data.token);
@@ -32,12 +42,19 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const changeName = async (name) => {
+    const { data } = await api.put('/auth/name', { name });
+    localStorage.setItem('token', data.token);
+    setUser(data.user);
+    return data;
+  };
+
   const logout = () => {
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, changeName, logout }}>
       {children}
     </AuthContext.Provider>
   );
