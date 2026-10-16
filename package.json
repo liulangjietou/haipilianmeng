@@ -1,0 +1,25 @@
+{
+  "name": "basketball-vote",
+  "version": "1.0.0",
+  "description": "篮球群球员星级评级投票网站",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"node --watch server.js\" \"npm run dev --prefix client\"",
+    "dev:server": "node --watch server.js",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "setup": "npm install && npm install --prefix client"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.9.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "pinyin-pro": "^3.26.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
