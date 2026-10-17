@@ -62,7 +62,7 @@ export default function Admin() {
   };
 
   const handleDeleteUser = async (id) => {
-    if (!confirm('确定删除此用户？相关投票也会被删除。')) return;
+    if (!confirm('确定删除此用户？删除后将不再显示在排行榜中，可随时恢复。')) return;
     try {
       await api.delete(`/admin/users/${id}`);
       if (users.length === 1 && page > 1) {
@@ -70,6 +70,15 @@ export default function Admin() {
       } else {
         loadData();
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRestoreUser = async (id) => {
+    try {
+      await api.post(`/admin/users/${id}/restore`);
+      loadData();
     } catch (err) {
       console.error(err);
     }
@@ -225,7 +234,7 @@ export default function Admin() {
           }`}
         >
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[720px]">
               <thead>
                 <tr className="text-slate-400 text-sm border-b border-slate-700/50">
                   <th className="px-4 py-3 text-left">ID</th>
@@ -256,13 +265,15 @@ export default function Admin() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`text-xs px-2 py-0.5 rounded ${
-                          u.active
-                            ? 'bg-green-600/20 text-green-400'
-                            : 'bg-red-600/20 text-red-400'
+                        className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${
+                          u.deleted
+                            ? 'bg-slate-600/30 text-slate-400'
+                            : u.active
+                              ? 'bg-green-600/20 text-green-400'
+                              : 'bg-red-600/20 text-red-400'
                         }`}
                       >
-                        {u.active ? '正常' : '禁用'}
+                        {u.deleted ? '已删除' : u.active ? '正常' : '禁用'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">
@@ -271,18 +282,29 @@ export default function Admin() {
                     <td className="px-4 py-3 text-center">
                       {u.role !== 'admin' && (
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleToggleUser(u.id, u.active)}
-                            className="text-xs text-amber-400 hover:text-amber-300"
-                          >
-                            {u.active ? '禁用' : '启用'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="text-xs text-red-400 hover:text-red-300"
-                          >
-                            删除
-                          </button>
+                          {u.deleted ? (
+                            <button
+                              onClick={() => handleRestoreUser(u.id)}
+                              className="text-xs text-green-400 hover:text-green-300"
+                            >
+                              恢复
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleToggleUser(u.id, u.active)}
+                                className="text-xs text-amber-400 hover:text-amber-300"
+                              >
+                                {u.active ? '禁用' : '启用'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="text-xs text-red-400 hover:text-red-300"
+                              >
+                                删除
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </td>

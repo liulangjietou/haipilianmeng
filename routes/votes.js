@@ -28,7 +28,7 @@ router.post('/', authRequired, (req, res) => {
   }
 
   const candidate = findUserById(candidateId);
-  if (!candidate || !candidate.active || candidate.role === 'admin') {
+  if (!candidate || !candidate.active || candidate.deleted) {
     return res.status(400).json({ error: '无效的被投票人' });
   }
 
@@ -53,7 +53,7 @@ router.post('/batch', authRequired, (req, res) => {
     if (!POSITIONS.find((p) => p.id === v.positionId)) continue;
     if (!STAR_LEVELS.includes(v.starLevel)) continue;
     const candidate = findUserById(v.candidateId);
-    if (!candidate || !candidate.active || candidate.role === 'admin') continue;
+    if (!candidate || !candidate.active || candidate.deleted) continue;
     if (voterId === v.candidateId) continue;
     const vote = upsertVote(voterId, v.candidateId, v.positionId, v.starLevel);
     results.push(vote);

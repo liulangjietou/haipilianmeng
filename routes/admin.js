@@ -5,6 +5,7 @@ import {
   getAllUsers,
   getUsersPage,
   deleteUser,
+  restoreUser,
   deleteVote,
   updateUser,
   updateVote,
@@ -71,7 +72,17 @@ router.delete('/users/:id', adminRequired, (req, res) => {
   const user = findUserById(id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   if (user.role === 'admin') return res.status(400).json({ error: '不能删除管理员' });
+  if (user.deleted) return res.status(400).json({ error: '该用户已被删除' });
   deleteUser(id);
+  res.json({ success: true });
+});
+
+router.post('/users/:id/restore', adminRequired, (req, res) => {
+  const id = parseInt(req.params.id);
+  const user = findUserById(id);
+  if (!user) return res.status(404).json({ error: '用户不存在' });
+  if (!user.deleted) return res.status(400).json({ error: '该用户未被删除' });
+  restoreUser(id);
   res.json({ success: true });
 });
 
@@ -79,6 +90,7 @@ router.put('/users/:id', adminRequired, async (req, res) => {
   const id = parseInt(req.params.id);
   const user = findUserById(id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
+  if (user.deleted) return res.status(400).json({ error: '请先恢复该用户' });
 
   const updates = {};
   if (req.body.active !== undefined) updates.active = req.body.active;

@@ -34,7 +34,9 @@ router.post('/register', async (req, res) => {
 
   const existing = findUserByName(name);
   if (existing) {
-    return res.status(400).json({ error: '该名字已被使用' });
+    return res.status(400).json({
+      error: existing.deleted ? '该名字已被已删除账号占用，请联系管理员恢复' : '该名字已被使用',
+    });
   }
 
   const hash = await bcrypt.hash(password, 10);
@@ -62,6 +64,9 @@ router.post('/login', async (req, res) => {
   const user = findUserByName(name);
   if (!user) {
     return res.status(400).json({ error: '用户不存在' });
+  }
+  if (user.deleted) {
+    return res.status(403).json({ error: '账号已被删除，请联系管理员恢复' });
   }
   if (!user.active) {
     return res.status(403).json({ error: '账号已被禁用' });

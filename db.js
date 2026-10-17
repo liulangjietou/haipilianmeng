@@ -30,7 +30,8 @@ sqlite.exec(`
     role TEXT NOT NULL DEFAULT 'user',
     active INTEGER NOT NULL DEFAULT 1,
     createdAt TEXT NOT NULL,
-    nameChangeCount INTEGER NOT NULL DEFAULT 0
+    nameChangeCount INTEGER NOT NULL DEFAULT 0,
+    deletedAt TEXT
   );
   CREATE TABLE IF NOT EXISTS votes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +48,9 @@ const userColumns = sqlite.prepare('PRAGMA table_info(users)').all();
 if (!userColumns.some((c) => c.name === 'nameChangeCount')) {
   sqlite.exec('ALTER TABLE users ADD COLUMN nameChangeCount INTEGER NOT NULL DEFAULT 0');
 }
+if (!userColumns.some((c) => c.name === 'deletedAt')) {
+  sqlite.exec('ALTER TABLE users ADD COLUMN deletedAt TEXT');
+}
 
 const stmts = {
   countUsers: sqlite.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -56,8 +60,9 @@ const stmts = {
     'INSERT INTO users (id, name, nickname, password, role, active, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *'
   ),
   allUsers: sqlite.prepare('SELECT * FROM users'),
-  deleteUser: sqlite.prepare('DELETE FROM users WHERE id = ?'),
-  deleteVotesOfUser: sqlite.prepare('DELETE FROM votes WHERE voterId = ? OR candidateId = ?'),
+  softDeleteUser: sqlite.prepare('UPDATE users SET deletedAt = ? WHERE id = ?'),
+  restoreUser: sqlite.prepare('UPDATE users SET deletedAt = NULL WHERE id = ?'),
+  deletedUserIds: sqlite.prepare('SELECT id FROM users WHERE deletedAt IS NOT NULL'),
   findVote: sqlite.prepare(
     'SELECT * FROM votes WHERE voterId = ? AND candidateId = ? AND positionId = ?'
   ),
@@ -71,14 +76,18 @@ const stmts = {
   allVotes: sqlite.prepare('SELECT * FROM votes'),
   countVotes: sqlite.prepare('SELECT COUNT(*) AS n FROM votes'),
   votesPage: sqlite.prepare('SELECT * FROM votes ORDER BY id DESC LIMIT ? OFFSET ?'),
-  usersPage: sqlite.prepare('SELECT * FROM users ORDER BY id ASC LIMIT ? OFFSET ?'),
+  usersPage: sqlite.prepare(
+    'SELECT * FROM users ORDER BY (deletedAt IS NOT NULL), id ASC LIMIT ? OFFSET ?'
+  ),
   votesForCandidate: sqlite.prepare('SELECT * FROM votes WHERE candidateId = ?'),
-  candidates: sqlite.prepare("SELECT * FROM users WHERE active = 1 AND role <> 'admin'"),
+  candidates: sqlite.prepare(
+    "SELECT * FROM users WHERE active = 1 AND deletedAt IS NULL"
+  ),
 };
 
 function mapUser(row) {
   if (!row) return row;
-  return { ...row, active: row.active === 1 };
+  return { ...row, active: row.active === 1, deleted: row.deletedAt != null };
 }
 
 function migrateLegacySnapshot() {
@@ -152,26 +161,29 @@ function createUser(name, passwordHash, role = 'user', nickname = '') {
 }
 
 function getAllUsers() {
-  return stmts.allUsers.all().map(({ password, ...u }) => ({ ...u, active: u.active === 1 }));
+  return stmts.allUsers.all().map((row) => {
+    const { password, ...u } = mapUser(row);
+    return u;
+  });
 }
 
 function getUsersPage(page = 1, pageSize = 20) {
   const total = stmts.countUsers.get().n;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const current = Math.min(Math.max(1, page), totalPages);
-  const rows = stmts.usersPage
-    .all(pageSize, (current - 1) * pageSize)
-    .map(({ password, ...u }) => ({ ...u, active: u.active === 1 }));
+  const rows = stmts.usersPage.all(pageSize, (current - 1) * pageSize).map((row) => {
+    const { password, ...u } = mapUser(row);
+    return u;
+  });
   return { rows, total, page: current, pageSize, totalPages };
 }
 
 function deleteUser(id) {
-  const tx = sqlite.transaction(() => {
-    const votes = stmts.deleteVotesOfUser.run(id, id);
-    const user = stmts.deleteUser.run(id);
-    return user.changes > 0 || votes.changes > 0;
-  });
-  return tx();
+  return stmts.softDeleteUser.run(new Date().toISOString(), id).changes > 0;
+}
+
+function restoreUser(id) {
+  return stmts.restoreUser.run(id).changes > 0;
 }
 
 const UPDATABLE_FIELDS = ['name', 'nickname', 'password', 'role', 'active'];
@@ -191,6 +203,7 @@ function updateUser(id, updates) {
 function changeUserName(id, newName) {
   const user = findUserById(id);
   if (!user) return { error: '用户不存在' };
+  if (user.deleted) return { error: '账号已被删除' };
   if (newName === user.name) return { error: '新名字与当前名字相同' };
   if (user.nameChangeCount >= MAX_NAME_CHANGES) return { error: '更改次数已用完' };
   if (findUserByName(newName)) return { error: '该名字已被使用' };
@@ -248,7 +261,8 @@ function getVotesForCandidate(candidateId) {
 
 function calculateResults() {
   const candidates = stmts.candidates.all().map(mapUser);
-  const allVotes = stmts.allVotes.all();
+  const deletedIds = new Set(stmts.deletedUserIds.all().map((row) => row.id));
+  const allVotes = stmts.allVotes.all().filter((v) => !deletedIds.has(v.voterId));
   const results = {};
 
   for (const candidate of candidates) {
@@ -302,8 +316,6 @@ function getDetailedResults() {
       }
     }
     playerRankings.sort((a, b) => {
-      if (b.finalStar !== a.finalStar) return b.finalStar - a.finalStar;
-      if (b.totalVotes !== a.totalVotes) return b.totalVotes - a.totalVotes;
       for (const star of [...STAR_LEVELS].reverse()) {
         const av = a.starCounts[star] || 0;
         const bv = b.starCounts[star] || 0;
@@ -318,7 +330,7 @@ function getDetailedResults() {
 
 function getPlayerDetail(playerId) {
   const player = findUserById(playerId);
-  if (!player) return null;
+  if (!player || player.deleted) return null;
 
   const detail = { player: { id: player.id, name: player.name }, positions: {} };
 
@@ -361,6 +373,7 @@ export {
   getAllUsers,
   getUsersPage,
   deleteUser,
+  restoreUser,
   updateUser,
   changeUserName,
   upsertVote,
