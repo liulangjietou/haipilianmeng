@@ -26,7 +26,7 @@ export default function Login() {
 
   return (
     <div className="max-w-md mx-auto mt-12">
-      <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-8">
+      <div className="card p-6 sm:p-8">
         <div className="text-center mb-8">
           <img src="/logo.jpg" alt="球队logo" className="w-20 h-20 mx-auto rounded-full object-cover border-2 border-court-500/50 mb-3" />
           <h1 className="text-2xl font-bold text-white">登录</h1>
@@ -46,7 +46,7 @@ export default function Login() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-court-500 transition-colors"
+              className="input"
               placeholder="输入你的名字"
               required
             />
@@ -58,7 +58,7 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-court-500 transition-colors"
+              className="input"
               placeholder="输入密码"
               required
             />
@@ -67,7 +67,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-court-600 hover:bg-court-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors"
+            className="btn-primary w-full py-3"
           >
             {loading ? '登录中...' : '登录'}
           </button>

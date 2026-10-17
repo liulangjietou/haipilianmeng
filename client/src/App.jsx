@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import MobileTabBar from './components/MobileTabBar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -12,7 +13,7 @@ export default function App() {
   return (
     <div className="min-h-screen text-white">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:pb-10 md:pt-6">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
+      <MobileTabBar />
     </div>
   );
 }

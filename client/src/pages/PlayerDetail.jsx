@@ -64,7 +64,7 @@ export default function PlayerDetail() {
           return (
             <div
               key={posId}
-              className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5"
+              className="card p-5"
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -86,7 +86,7 @@ export default function PlayerDetail() {
                   return (
                     <div key={star} className="flex items-center gap-3">
                       <span className="text-xs text-slate-400 w-8">{star}★</span>
-                      <div className="flex-1 h-5 bg-slate-900/50 rounded-full overflow-hidden">
+                      <div className="flex-1 h-5 bg-white/[0.06] rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-court-600 to-court-400 rounded-full transition-all duration-500"
                           style={{ width: `${pct}%` }}
@@ -104,7 +104,7 @@ export default function PlayerDetail() {
         })}
 
         {Object.values(detail.positions).every((p) => p.totalVotes === 0) && (
-          <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
+          <div className="card p-8 text-center">
             <p className="text-slate-400">暂无评级数据</p>
           </div>
         )}

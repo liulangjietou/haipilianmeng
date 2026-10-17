@@ -40,8 +40,7 @@ export default function Vote() {
 
       const voteMap = {};
       for (const v of votesRes.data.votes) {
-        const key = `${v.candidateId}-${v.positionId}`;
-        voteMap[key] = v.starLevel;
+        voteMap[`${v.candidateId}-${v.positionId}`] = v.starLevel;
       }
       setMyVotes(voteMap);
     } catch (err) {
@@ -51,10 +50,9 @@ export default function Vote() {
     }
   };
 
-  const handleStarClick = async (candidateId, positionId, starLevel) => {
+  const handleStarClick = (candidateId, positionId, starLevel) => {
     const key = `${candidateId}-${positionId}`;
     const newVotes = { ...myVotes };
-
     if (newVotes[key] === starLevel) {
       delete newVotes[key];
     } else {
@@ -91,88 +89,90 @@ export default function Vote() {
 
   const totalVotes = Object.keys(myVotes).length;
 
+  const saveButton = (
+    <button
+      onClick={handleSave}
+      disabled={saving}
+      className={`btn-primary px-6 py-2.5 text-sm ${saved ? 'from-green-600 to-green-600' : ''}`}
+    >
+      {saving ? '保存中...' : saved ? '已保存 ✓' : '保存投票'}
+    </button>
+  );
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-white mb-1">投票</h1>
-        <p className="text-slate-400 text-sm">
-          为球员在不同位置上评定星级（1-5星，5星最高）
-        </p>
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-5 text-center">
+        <h1 className="text-2xl font-extrabold text-white">投票</h1>
+        <p className="mt-1 text-sm text-slate-400">为球员在不同位置上评定星级（1-5星，5星最高）</p>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-slate-400">
-          已评 <span className="text-court-400 font-medium">{totalVotes}</span> 项
+      <div className="card mb-4 flex items-center justify-between px-4 py-3">
+        <span className="text-sm text-slate-300">
+          已评 <span className="font-semibold text-court-400">{totalVotes}</span> 项
         </span>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-            saved
-              ? 'bg-green-600 text-white'
-              : 'bg-court-600 hover:bg-court-500 text-white disabled:opacity-50'
-          }`}
-        >
-          {saving ? '保存中...' : saved ? '已保存 ✓' : '保存投票'}
-        </button>
+        {saveButton}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {players.length === 0 ? (
-          <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
+          <div className="card p-8 text-center">
             <p className="text-slate-400">暂无可投票的球员</p>
           </div>
         ) : (
-          players.map((player) => (
-            <div
-              key={player.id}
-              className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden"
-            >
-              <button
-                onClick={() => setExpanded(expanded === player.id ? null : player.id)}
-                className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-700/20 transition-colors"
-              >
-                <span className="text-white font-medium">{player.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
-                    {POSITIONS.filter((p) => myVotes[`${player.id}-${p.id}`]).length}/5 已评
-                  </span>
-                  <svg
-                    className={`w-4 h-4 text-slate-400 transition-transform ${
-                      expanded === player.id ? 'rotate-180' : ''
-                    }`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </button>
+          players.map((player) => {
+            const ratedCount = POSITIONS.filter((p) => myVotes[`${player.id}-${p.id}`]).length;
+            const open = expanded === player.id;
+            return (
+              <div key={player.id} className="card overflow-hidden">
+                <button
+                  onClick={() => setExpanded(open ? null : player.id)}
+                  className="flex w-full items-center justify-between px-4 py-4 transition-colors active:bg-white/[0.05]"
+                >
+                  <span className="text-base font-semibold text-white">{player.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        ratedCount === 5 ? 'bg-green-500/15 text-green-400' : 'bg-white/10 text-slate-400'
+                      }`}
+                    >
+                      {ratedCount}/5 已评
+                    </span>
+                    <svg
+                      className={`h-4 w-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
 
-              {expanded === player.id && (
-                <div className="px-5 pb-4 space-y-3 border-t border-slate-700/30 pt-3">
-                  {POSITIONS.map((pos) => {
-                    const key = `${player.id}-${pos.id}`;
-                    const currentStar = myVotes[key] || 0;
-                    return (
-                      <div key={pos.id} className="flex items-center justify-between">
-                        <span className="text-sm text-slate-400 w-20">
-                          {pos.id}号位
-                          <span className="text-slate-500 text-xs ml-1">{pos.name}</span>
-                        </span>
-                        <StarRating
-                          count={currentStar}
-                          interactive
-                          onChange={(star) => handleStarClick(player.id, pos.id, star)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))
+                {open && (
+                  <div className="space-y-1 border-t border-white/10 px-2 py-3">
+                    {POSITIONS.map((pos) => {
+                      const key = `${player.id}-${pos.id}`;
+                      const currentStar = myVotes[key] || 0;
+                      return (
+                        <div key={pos.id} className="flex items-center justify-between rounded-xl px-2 py-1.5">
+                          <span className="w-24 shrink-0 text-sm text-slate-300">
+                            <span className="font-semibold text-court-400">{pos.id}号位</span>
+                            <span className="ml-1 text-xs text-slate-500">{pos.name}</span>
+                          </span>
+                          <StarRating
+                            count={currentStar}
+                            size="lg"
+                            interactive
+                            onChange={(star) => handleStarClick(player.id, pos.id, star)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

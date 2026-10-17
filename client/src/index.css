@@ -2,18 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', sans-serif;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #fff;
+  background-color: #0b1220;
+  background-image: radial-gradient(1100px 560px at 85% -10%, rgba(249, 115, 22, 0.16), transparent 60%),
+    radial-gradient(900px 500px at -10% 25%, rgba(56, 189, 248, 0.08), transparent 60%),
+    linear-gradient(180deg, #0e1626 0%, #0b1220 100%);
+  background-attachment: fixed;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-md;
+  }
+  .card-solid {
+    @apply rounded-2xl border border-white/10 bg-slate-900/60;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-court-500 to-court-600 font-semibold text-white shadow-lg shadow-court-600/25 transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] font-medium text-slate-200 transition active:scale-[0.98];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-sm text-slate-300 transition active:scale-95;
+  }
+  .chip-active {
+    @apply border-court-500/60 bg-court-500/20 font-medium text-court-300;
+  }
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-white placeholder-slate-500 outline-none transition focus:border-court-500 focus:bg-white/[0.09];
+  }
+  .tabbar-safe {
+    padding-bottom: calc(0.4rem + var(--safe-bottom));
+  }
 }
 
 .star-filled {
-  color: #f59e0b;
-  text-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.45);
 }
 
 .star-empty {
-  color: #475569;
+  color: #3f4b5f;
 }

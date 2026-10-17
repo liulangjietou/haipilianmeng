@@ -41,20 +41,37 @@ export default function Home() {
     );
   }
 
+  const positions = data?.positions || [];
+
   return (
     <div>
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold mb-1">
-          <span className="bg-gradient-to-r from-court-400 to-amber-400 bg-clip-text text-transparent">
+      <div className="mb-4 text-center">
+        <h1 className="text-2xl font-extrabold">
+          <span className="bg-gradient-to-r from-court-300 via-court-400 to-amber-300 bg-clip-text text-transparent">
             嗨皮联盟实时排行榜
           </span>
         </h1>
-        <p className="text-slate-400 text-xs">每10秒自动刷新</p>
+        <p className="mt-1 text-xs text-slate-400">每10秒自动刷新 · 点击球场或位置查看排名</p>
       </div>
 
       <CourtSelector activePos={activePos} onSelect={setActivePos} topNames={topNames} />
 
-      <div className="mt-6">
+      <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+        <div className="flex min-w-max gap-2">
+          {positions.map((pos) => (
+            <button
+              key={pos.id}
+              onClick={() => setActivePos(pos.id)}
+              className={`chip ${activePos === pos.id ? 'chip-active' : ''}`}
+            >
+              <span className="font-bold">{pos.id}</span>
+              {pos.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4">
         <PositionTable positionId={activePos} rankings={data?.rankings?.[activePos]} />
       </div>
     </div>

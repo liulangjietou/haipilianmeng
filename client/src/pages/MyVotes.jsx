@@ -62,7 +62,7 @@ export default function MyVotes() {
       </div>
 
       {Object.keys(grouped).length === 0 ? (
-        <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700/50">
+        <div className="card p-8 text-center">
           <p className="text-slate-400 mb-3">还没有投过票</p>
           <button
             onClick={() => navigate('/vote')}
@@ -76,14 +76,14 @@ export default function MyVotes() {
           {Object.entries(grouped).map(([candidateId, { name, votes: vlist }]) => (
             <div
               key={candidateId}
-              className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5"
+              className="card p-5"
             >
-              <h3 className="text-white font-medium mb-3">{name}</h3>
+              <h3 className="text-white font-semibold mb-3">{name}</h3>
               <div className="space-y-2">
                 {vlist.map((v) => (
                   <div
                     key={v.id}
-                    className="flex items-center justify-between bg-slate-900/30 rounded-lg px-4 py-2"
+                    className="flex items-center justify-between bg-white/[0.04] rounded-xl px-4 py-2.5"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-slate-400">
